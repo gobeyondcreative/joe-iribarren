@@ -1,0 +1,46 @@
+name: Update contact form and publish
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/contact-form.yml'
+      - '.github/scripts/migrate_contact.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: personal-contact-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply targeted contact form migration
+        run: python3 .github/scripts/migrate_contact.py
+      - name: Commit website update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Connect personal contact form to Resend endpoint'
+            git push
+          fi
+      - name: Prepare website artifact
+        run: |
+          mkdir -p public
+          cp index.html CNAME public/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4
