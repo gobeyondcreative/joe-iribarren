@@ -863,7 +863,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="contact-label reveal">Let's Connect</div>
   <h2 class="contact-title reveal">Let's Build<br><span class="accent">Something</span></h2>
   <p class="contact-subtitle reveal">If you run a home services company and revenue is leaking, I can find it. If you just want to talk cars, fishing, or systems, I am here for that too.</p>
-  <form class="contact-form reveal" id="contactForm" action="https://formsubmit.co/joe@dealerleadpro.com" method="POST">
+  <form class="contact-form reveal" id="contactForm" action="https://boostconhq.com/api/personal-contact" method="POST">
     <input type="hidden" name="_subject" value="New inquiry from joeiribarren.com">
     <input type="hidden" name="_template" value="table">
     <input type="hidden" name="_captcha" value="false">
@@ -942,13 +942,41 @@ document.querySelectorAll('.expand-card, .life-card.expandable').forEach(el => {
 
 const form = document.getElementById('contactForm');
 const success = document.getElementById('formSuccess');
+form.action = 'https://boostconhq.com/api/personal-contact';
+const trap = document.createElement('input');
+trap.type = 'text'; trap.name = 'website'; trap.tabIndex = -1; trap.autocomplete = 'off';
+trap.setAttribute('aria-hidden', 'true');
+trap.style.cssText = 'position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;';
+form.appendChild(trap);
+const status = document.createElement('p');
+status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+status.style.cssText = 'font-size:14px;line-height:1.6;';
+form.appendChild(status);
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const formData = new FormData(form);
+  const button = form.querySelector('button[type="submit"]');
+  if (button.disabled) return;
+  const label = button.textContent;
+  button.disabled = true; button.textContent = 'Sending...'; status.textContent = '';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch(form.action, { method: 'POST', headers: { 'Accept': 'application/json' }, body: formData });
-    if (response.ok) { form.style.display = 'none'; success.classList.add('show'); }
-  } catch (err) { form.submit(); }
+    const response = await fetch(form.action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.fromEntries(new FormData(form))),
+      signal: controller.signal
+    });
+    const result = await response.json();
+    if (!response.ok || result.ok !== true) throw new Error(result.error || 'Your message was not sent. Please try again.');
+    form.style.display = 'none'; success.classList.add('show');
+  } catch (err) {
+    status.textContent = err.name === 'AbortError'
+      ? 'Delivery could not be confirmed. Please email joe@boostconhq.com directly to avoid sending twice.'
+      : 'Your message could not be sent. Please retry or email joe@boostconhq.com directly.';
+  } finally {
+    clearTimeout(timeout); button.disabled = false; button.textContent = label;
+  }
 });
 
 // Mobile menu
