@@ -1,4 +1,4 @@
-name: Update contact form and publish
+name: Update contact form
 on:
   push:
     branches: [main]
@@ -24,7 +24,14 @@ jobs:
         with:
           ref: main
       - name: Apply targeted contact form migration
-        run: python3 .github/scripts/migrate_contact.py
+        run: |
+          python3 .github/scripts/migrate_contact.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text().replace('I will get back to you shortly. Check your email for a confirmation.', 'Your message has been sent to Joe. I will get back to you shortly.')
+          p.write_text(s)
+          PY
       - name: Commit website update
         run: |
           git config user.name 'github-actions[bot]'
