@@ -1,0 +1,42 @@
+name: Publish Website
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ai-guide/**'
+      - 'index.html'
+      - 'CNAME'
+      - '.github/workflows/publish-site.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: personal-contact-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build guide and preserve homepage
+        run: |
+          pip install Markdown==3.7
+          python ai-guide/build.py
+          mkdir -p public/ai-guide
+          cp index.html CNAME public/
+          cp ai-guide/index.html public/ai-guide/
+          touch public/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4
